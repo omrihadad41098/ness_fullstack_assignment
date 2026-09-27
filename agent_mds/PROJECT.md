@@ -32,7 +32,7 @@ If code changes a contract described here, update this file in the same change.
 - [ ] Optional filter by kind (image / text). Sensible empty / no-results states.
 - [ ] **All searching is executed by MongoDB queries.** No in-memory ranking, no external search engine, no vector math in Node.
 
-- [ ] README: overview, architecture, run locally, run tests, Postman usage, deploy, decisions & trade-offs, limitations/next steps, **AI tools used**.
+- [ ] README: overview, architecture, run locally, run tests, deploy, decisions & trade-offs, limitations/next steps, **AI tools used**.
 
 
 
@@ -45,7 +45,7 @@ Authentication/authorization, multi-tenancy, scalability work, production-grade 
 - **MongoDB only** for persistence (metadata **and** file bytes via GridFS). No SQLite, no local disk storage.
 - **No caching anywhere**: every request is computed fresh (see §6).
 - **Styling:** Tailwind CSS.
-- **Testing:** Vitest only (client + server), **unit tests only** for now. API testing via **Postman**.
+- **Testing:** Vitest only (client + server), **unit tests only**. End-to-end API behaviour is checked through the UI.
 
 ---
 
@@ -64,7 +64,7 @@ Authentication/authorization, multi-tenancy, scalability work, production-grade 
 | Logging      | Tiny `logger.ts` wrapper over `console` emitting JSON lines           | No logging library                                                         |
 | AI           | `AiProvider` interface; one real provider (see §4) + `FakeAiProvider` | Swappable via `AI_PROVIDER` env                                            |
 | Client       | React 19, Vite, TypeScript, **Tailwind CSS v4**, react-router         | Data fetching via small custom hooks over `fetch`                          |
-| Tests        | **Vitest** (both packages), unit only                                 | Postman collection for API                                                 |
+| Tests        | **Vitest** (both packages), unit only                                 | UI click-through for API behaviour                                         |
 | Deploy       | One Docker image (Express serves API + built client) + MongoDB Atlas  | Host: see §8                                                               |
 
 
@@ -252,7 +252,7 @@ correct types, lowercase + trim + dedupe tags, cap lengths. Invalid → throw �
    so "black hair" ranks assets with both words (especially in tags) first.
 3. Fallback when the primary returns nothing: case-insensitive **escaped** regex on `tags`, `keywords`,
   `description`, `originalName` (handles partial words like "docu"). Still a DB query.
-4. Return `{ results: [{ asset, score, matchedTags }], total }`. `matchedTags` = tags/keywords containing a query term (computed from the returned doc).
+4. Return `{ results: [{ asset, score }], total }`. Each asset carries its tags and description so the UI can show them (keywords are search-only); ranking stays entirely MongoDB's.
 
 - Never pass raw user input into `$regex` without escaping; `$text` input is passed as a string (no operators constructed from it).
 - Scale path (mention in README, don't build): MongoDB Atlas Search / Atlas Vector Search for semantic ranking.
@@ -284,11 +284,14 @@ correct types, lowercase + trim + dedupe tags, cap lengths. Invalid → throw �
 type Asset = {
   id: string; originalName: string; mimeType: string; kind: 'text' | 'image'; sizeBytes: number;
   status: 'pending' | 'processing' | 'ready' | 'failed'; error: string | null;
-  description: string | null; tags: string[]; keywords: string[]; extractedText: string | null;
+  title: string | null;          // short caption, shown as the name on the detail page ("Black cat")
+  description: string | null;    // shown on the detail page
+  tags: string[];                // shown as chips on cards and the detail page (keywords stay server-side)
+  extractedText: string | null;  // text-file body for the detail preview; images stay null
   contentUrl: string;   // relative: /api/assets/:id/content
   createdAt: string; updatedAt: string;
 };
-type SearchResult = { asset: Asset; score: number; matchedTags: string[] };
+type SearchResult = { asset: Asset; score: number };
 ```
 
 Error shape (every non-2xx): `{ "error": { "code": "...", "message": "...", "details"?: any, "requestId": "..." } }`
@@ -365,7 +368,7 @@ Local MongoDB: `docker run -d --name kms-mongo -p 27017:27017 mongo:7` (or a fre
   `NODE_ENV=production`, `PORT=3000`; run as non-root `node`; `EXPOSE 3000`; `CMD ["node","server/dist/index.js"]`.
 
 `.dockerignore`: `**/node_modules`, `**/dist`, `**/.env`, `.git`, `*.pdf`, coverage, plus the
-docs/tooling the image never needs (`agent_mds`, `postman`, `samples`, `*.md` except `README.md`).
+docs/tooling the image never needs (`agent_mds`, `samples`, `*.md` except `README.md`).
 
 Implemented extras: `CLIENT_DIST_DIR=/app/client/dist` is baked in (the `../client/dist` default is
 relative to the working directory and would not resolve in the image); `HEALTHCHECK` polls
@@ -393,9 +396,8 @@ The container is **stateless** (all data in MongoDB/GridFS), so any container ho
 - [x] `docker build` works from a clean clone; container starts with only documented env vars.
 - [x] Startup fails fast with a clear message if `MONGODB_URI` or the AI key is missing.
 - [ ] Deployed `/api/health` 200; UI at `/`; deep link `/assets/<id>` works. _(verified locally in the container; deployment is M6)_
-- [ ] Postman collection passes against the deployed environment.
 - [ ] Both brief examples work on the deployed URL; demo assets seeded from `samples/`.
 
 **README checklist:** overview + live URL + screenshot · features ↔ brief · architecture diagram · how search
-works and why · run locally (with `AI_PROVIDER=fake` option) · tests · Postman · Docker · deploy · config table ·
+works and why · run locally (with `AI_PROVIDER=fake` option) · tests · Docker · deploy · config table ·
 design decisions & trade-offs (from `STATUS.md`) · limitations & next steps · **AI tools used**.

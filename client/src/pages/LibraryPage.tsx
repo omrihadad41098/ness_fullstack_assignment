@@ -60,13 +60,13 @@ export default function LibraryPage() {
           </p>
 
           {results.length > 0 ? (
-            <AssetGrid results={results} />
+            <AssetGrid results={results} onDeleted={refresh} />
           ) : (
             !loading &&
             (searching ? (
               <EmptyState
                 title="No matches"
-                hint="Try a broader word — the AI also indexes categories like “document”, “person” or “animal”."
+                hint="Try a shorter or more general word."
               />
             ) : (
               <EmptyState

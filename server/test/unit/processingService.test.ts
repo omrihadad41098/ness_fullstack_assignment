@@ -6,6 +6,7 @@ import type { AiProvider, AssetMetadata } from '../../src/ai/aiProvider.js';
 import type { AssetRecord } from '../../src/models/asset.model.js';
 
 const metadata: AssetMetadata = {
+  title: 'Black hair',
   description: 'A woman with black hair.',
   tags: ['black hair'],
   keywords: ['person', 'portrait'],
@@ -38,6 +39,7 @@ describe('processingService', () => {
 
     const stored = repository.records[0];
     expect(stored?.status).toBe('ready');
+    expect(stored?.title).toBe('Black hair');
     expect(stored?.tags).toEqual(['black hair']);
     expect(stored?.description).toBe('A woman with black hair.');
     expect(stored?.aiProvider).toBe('stub');

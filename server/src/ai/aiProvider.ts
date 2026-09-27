@@ -1,6 +1,8 @@
 /** What the AI must produce for every asset; this is what search runs against. */
 export type AssetMetadata = {
-  /** 1–3 sentences describing the asset. */
+  /** A few words naming the subject ("Black cat") — the only one of these fields the UI shows. */
+  title: string;
+  /** 1–3 sentences describing the asset. Indexed for search, not displayed. */
   description: string;
   /** Concrete terms: objects, attributes, colours, people features. Multi-word terms stay intact. */
   tags: string[];

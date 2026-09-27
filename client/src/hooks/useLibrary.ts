@@ -59,7 +59,7 @@ export function useLibrary({ query, kind, page }: LibraryArgs): LibraryState {
       debouncedQuery === ''
         ? listAssets(args).then(({ assets, total }) => ({
             // A plain listing has no relevance score; the shared shape keeps the grid simple.
-            results: assets.map((asset: Asset) => ({ asset, score: 0, matchedTags: [] })),
+            results: assets.map((asset: Asset) => ({ asset, score: 0 })),
             total,
           }))
         : searchAssets({ ...args, q: debouncedQuery });

@@ -3,6 +3,7 @@ import type { AssetMetadata } from './aiProvider.js';
 
 export const MAX_TAGS = 15;
 export const MAX_TAG_LENGTH = 60;
+export const MAX_TITLE_LENGTH = 80;
 export const MAX_DESCRIPTION_LENGTH = 1_000;
 export const MAX_EXTRACTED_TEXT_CHARS = 50_000;
 
@@ -19,14 +20,16 @@ export function parseMetadata(raw: unknown): AssetMetadata {
   }
   const record = value as Record<string, unknown>;
 
+  const title = normaliseTitle(record.title);
   const description = normaliseDescription(record.description);
   const tags = normaliseTerms(record.tags);
   const keywords = normaliseTerms(record.keywords);
-  if (description === '' && tags.length === 0 && keywords.length === 0) {
+  if (title === '' && description === '' && tags.length === 0 && keywords.length === 0) {
     throw new AppError('INTERNAL', 'AI response contained no usable metadata');
   }
 
   return {
+    title,
     description,
     tags,
     keywords,
@@ -45,6 +48,19 @@ function parseJson(raw: string): unknown {
   } catch {
     throw new AppError('INTERNAL', 'AI response was not valid JSON');
   }
+}
+
+/**
+ * The one field a user actually reads, so it is tidied harder than the rest: models like to wrap
+ * captions in quotes and end them with a full stop, neither of which belongs in a heading.
+ */
+function normaliseTitle(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return collapseWhitespace(value)
+    .replace(/^["'“”]+|["'“”]+$/g, '')
+    .replace(/\.+$/, '')
+    .slice(0, MAX_TITLE_LENGTH)
+    .trim();
 }
 
 function normaliseDescription(value: unknown): string {

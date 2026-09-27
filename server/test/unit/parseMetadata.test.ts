@@ -6,6 +6,7 @@ describe('parseMetadata', () => {
   it('accepts a well-formed response', () => {
     const metadata = parseMetadata(
       JSON.stringify({
+        title: 'Black hair',
         description: 'A woman with black hair.',
         tags: ['black hair', 'portrait'],
         keywords: ['person'],
@@ -14,11 +15,23 @@ describe('parseMetadata', () => {
     );
 
     expect(metadata).toEqual({
+      title: 'Black hair',
       description: 'A woman with black hair.',
       tags: ['black hair', 'portrait'],
       keywords: ['person'],
       extractedText: 'HELLO',
     });
+  });
+
+  it('strips quotes and a trailing full stop from the title', () => {
+    const metadata = parseMetadata({
+      title: '"Black cat."',
+      description: 'x',
+      tags: ['a'],
+      keywords: [],
+    });
+
+    expect(metadata.title).toBe('Black cat');
   });
 
   it('strips markdown fences the model was told not to add', () => {

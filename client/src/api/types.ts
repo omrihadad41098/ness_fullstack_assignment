@@ -1,6 +1,6 @@
 /**
  * Mirror of `server/src/types/api.ts` — change both together
- * (and `agent_mds/PROJECT.md` §6 + the Postman collection).
+ * (and `agent_mds/PROJECT.md` §6).
  */
 
 export type AssetKind = 'text' | 'image';
@@ -14,9 +14,9 @@ export type Asset = {
   sizeBytes: number;
   status: AssetStatus;
   error: string | null;
-  description: string | null;
-  tags: string[];
-  keywords: string[];
+  /** Short human-readable caption ("Black cat"), shown as the name on the detail page. */
+  title: string | null;
+  /** File body for text assets, so the detail page can preview it. Images stay null. */
   extractedText: string | null;
   contentUrl: string;
   createdAt: string;
@@ -26,7 +26,6 @@ export type Asset = {
 export type SearchResult = {
   asset: Asset;
   score: number;
-  matchedTags: string[];
 };
 
 export type HealthResponse = {

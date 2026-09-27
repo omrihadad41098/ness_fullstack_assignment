@@ -44,13 +44,14 @@ describe('searchService', () => {
 
   const service = createSearchService(createFakeRepository([black, receipt, pending]));
 
-  it('returns DTOs with the score and the terms that matched', async () => {
+  it('returns DTOs with the score and the tags, keeping keywords server-side', async () => {
     const response = await service.search({ q: 'black hair', page: 1, limit: 20, kind: null });
 
     expect(response.query).toBe('black hair');
     expect(response.total).toBe(1);
     expect(response.results[0]?.asset.id).toBe(black._id.toString());
-    expect(response.results[0]?.matchedTags).toEqual(['black hair']);
+    expect(response.results[0]?.asset.tags).toEqual(['black hair']);
+    expect(response.results[0]?.asset).not.toHaveProperty('keywords');
     expect(response.results[0]?.score).toBeGreaterThan(0);
   });
 
@@ -58,7 +59,6 @@ describe('searchService', () => {
     const response = await service.search({ q: 'document', page: 1, limit: 20, kind: null });
 
     expect(response.results.map((result) => result.asset.originalName)).toEqual(['receipt.txt']);
-    expect(response.results[0]?.matchedTags).toContain('document');
   });
 
   it('never leaks internal fields into results', async () => {

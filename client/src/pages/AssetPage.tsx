@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import StatusBadge from '../components/StatusBadge';
-import TagList from '../components/TagList';
 import ErrorBanner from '../components/ErrorBanner';
+import TermChips from '../components/TermChips';
+import { uniqueTags } from '../lib/terms';
 import { useAsset } from '../hooks/useAsset';
-import { deleteAsset, reprocessAsset } from '../api/assets';
-import { formatBytes } from '../lib/formatBytes';
-import { formatDate } from '../lib/formatDate';
+import { deleteAsset } from '../api/assets';
+import { displayTitle } from '../lib/displayTitle';
 import type { Asset } from '../api/types';
 
 export default function AssetPage() {
@@ -16,15 +16,14 @@ export default function AssetPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const runAction = async (action: () => Promise<unknown>, after: () => void): Promise<void> => {
+  const remove = async (): Promise<void> => {
     setBusy(true);
     setActionError(null);
     try {
-      await action();
-      after();
+      await deleteAsset(id);
+      void navigate('/');
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Action failed');
-    } finally {
+      setActionError(err instanceof Error ? err.message : 'Could not remove this file');
       setBusy(false);
     }
   };
@@ -41,89 +40,53 @@ export default function AssetPage() {
     );
   }
 
+  const title = displayTitle(asset);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link to="/" className="text-sm text-slate-600 hover:text-slate-900">
           ← Library
         </Link>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void runAction(() => reprocessAsset(asset.id), refresh)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-          >
-            Re-analyse
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              void runAction(
-                () => deleteAsset(asset.id),
-                () => void navigate('/'),
-              )
-            }
-            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
-          >
-            Delete
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void remove()}
+          className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          {busy ? 'Removing…' : 'Remove'}
+        </button>
       </div>
 
       {actionError !== null && <ErrorBanner message={actionError} />}
 
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{asset.originalName}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {asset.mimeType} · {formatBytes(asset.sizeBytes)} · uploaded{' '}
-            {formatDate(asset.createdAt)}
-          </p>
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+          <StatusBadge status={asset.status} />
         </div>
-        <StatusBadge status={asset.status} />
+        {asset.description !== null && asset.description.trim() !== '' && (
+          <p className="max-w-3xl text-sm leading-relaxed text-slate-700">{asset.description}</p>
+        )}
+        <TermChips terms={uniqueTags(asset)} size="md" />
       </header>
 
-      {asset.status === 'failed' && asset.error !== null && (
-        <ErrorBanner message={`Analysis failed: ${asset.error}`} />
+      {asset.status === 'failed' && (
+        <ErrorBanner message="Analysis failed. Remove the file and upload it again." />
       )}
 
-      <Preview asset={asset} />
-
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-slate-900">AI metadata</h2>
-        {asset.status === 'ready' ? (
-          <dl className="mt-4 space-y-4 text-sm">
-            <Field label="Description">
-              <p className="text-slate-700">{asset.description ?? '—'}</p>
-            </Field>
-            <Field label="Tags">
-              <TagList terms={asset.tags} />
-            </Field>
-            <Field label="Keywords">
-              <TagList terms={asset.keywords} />
-            </Field>
-          </dl>
-        ) : (
-          <p className="mt-2 text-sm text-slate-500">
-            {asset.status === 'failed'
-              ? 'No metadata was stored. Use “Re-analyse” to try again.'
-              : 'The AI is still analysing this file. This page updates itself.'}
-          </p>
-        )}
-      </section>
+      <Preview asset={asset} title={title} />
     </div>
   );
 }
 
-function Preview({ asset }: { asset: Asset }) {
+function Preview({ asset, title }: { asset: Asset; title: string }) {
   if (asset.kind === 'image') {
     return (
       <figure className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <img
           src={asset.contentUrl}
-          alt={asset.description ?? asset.originalName}
+          alt={title}
           className="max-h-[32rem] w-full bg-slate-100 object-contain"
         />
       </figure>
@@ -132,16 +95,8 @@ function Preview({ asset }: { asset: Asset }) {
 
   return (
     <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-700">
-      {asset.extractedText ?? 'The file content has not been stored yet.'}
+      {asset.extractedText ??
+        (asset.status === 'ready' ? 'No text to show.' : 'Opening the file…')}
     </pre>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-1.5">{children}</dd>
-    </div>
   );
 }

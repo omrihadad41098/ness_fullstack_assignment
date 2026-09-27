@@ -34,6 +34,7 @@ export type SearchResultPage = {
 };
 
 export type AssetMetadataUpdate = {
+  title: string | null;
   description: string | null;
   tags: string[];
   keywords: string[];
@@ -51,6 +52,7 @@ export type AssetRepository = {
   list(query: ListQuery): Promise<ListResult>;
   search(query: SearchQuery): Promise<SearchResultPage>;
   deleteById(id: Types.ObjectId): Promise<AssetRecord | null>;
+  deleteByFileIds(fileIds: Types.ObjectId[]): Promise<void>;
   /** Atomically moves an asset to `processing`; null means someone else already claimed it. */
   claimForProcessing(id: Types.ObjectId): Promise<AssetRecord | null>;
   markReady(id: Types.ObjectId, metadata: AssetMetadataUpdate): Promise<void>;
@@ -141,6 +143,10 @@ export function createAssetRepository(): AssetRepository {
 
     async deleteById(id) {
       return AssetModel.findByIdAndDelete(id).lean<AssetRecord>().exec();
+    },
+
+    async deleteByFileIds(fileIds) {
+      await AssetModel.deleteMany({ fileId: { $in: fileIds } }).exec();
     },
 
     async claimForProcessing(id) {

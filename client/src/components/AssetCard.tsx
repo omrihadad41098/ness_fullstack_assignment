@@ -1,57 +1,84 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
-import TagList from './TagList';
-import { formatBytes } from '../lib/formatBytes';
+import TermChips from './TermChips';
+import { displayTitle } from '../lib/displayTitle';
+import { limitTerms, uniqueTags } from '../lib/terms';
+import { deleteAsset } from '../api/assets';
 import type { SearchResult } from '../api/types';
 
-export default function AssetCard({ result }: { result: SearchResult }) {
-  const { asset, matchedTags, score } = result;
+type Props = {
+  result: SearchResult;
+  onDeleted: () => void;
+};
+
+const CARD_TERM_LIMIT = 6;
+
+export default function AssetCard({ result, onDeleted }: Props) {
+  const { asset } = result;
+  const title = displayTitle(asset);
+  const { shown, hiddenCount } = limitTerms(uniqueTags(asset), CARD_TERM_LIMIT);
+  const analysing = asset.status === 'pending' || asset.status === 'processing';
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async (): Promise<void> => {
+    setRemoving(true);
+    setError(null);
+    try {
+      await deleteAsset(asset.id);
+      onDeleted();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not remove this file');
+      setRemoving(false);
+    }
+  };
 
   return (
-    <Link
-      to={`/assets/${asset.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900"
-    >
-      <div className="flex h-40 items-center justify-center overflow-hidden bg-slate-100">
-        {asset.kind === 'image' ? (
-          <img
-            src={asset.contentUrl}
-            alt={asset.description ?? asset.originalName}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <p className="line-clamp-6 px-4 py-3 text-xs leading-relaxed text-slate-500">
-            {asset.extractedText ?? 'Text file'}
-          </p>
-        )}
-      </div>
+    <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <Link
+        to={`/assets/${asset.id}`}
+        aria-label={title}
+        className="group flex flex-col focus:outline-none focus:ring-2 focus:ring-slate-900"
+      >
+        <div className="flex h-40 items-center justify-center overflow-hidden bg-slate-100">
+          {asset.kind === 'image' ? (
+            <img
+              src={asset.contentUrl}
+              alt={title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            />
+          ) : (
+            <p className="px-4 text-sm text-slate-500">Text file</p>
+          )}
+        </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="truncate text-sm font-medium text-slate-900" title={asset.originalName}>
-            {asset.originalName}
-          </h3>
+        <div className="flex items-start justify-between gap-2 p-4 pb-2">
+          <div className="min-w-0 flex-1">
+            {shown.length > 0 ? (
+              <TermChips terms={shown} hiddenCount={hiddenCount} />
+            ) : (
+              <p className="text-xs text-slate-500">
+                {analysing ? 'Analysing…' : 'No tags yet'}
+              </p>
+            )}
+          </div>
           <StatusBadge status={asset.status} />
         </div>
+      </Link>
 
-        <p className="line-clamp-2 text-xs text-slate-600">
-          {asset.description ?? describeMissingDescription(asset.status)}
-        </p>
-
-        <div className="mt-auto space-y-2 pt-1">
-          <TagList terms={[...asset.tags, ...asset.keywords]} highlighted={matchedTags} limit={5} />
-          <p className="text-[11px] text-slate-400">
-            {asset.kind} · {formatBytes(asset.sizeBytes)}
-            {score > 0 && ` · relevance ${score.toFixed(1)}`}
-          </p>
-        </div>
+      <div className="flex items-center justify-end px-4 pb-3">
+        <button
+          type="button"
+          disabled={removing}
+          onClick={() => void remove()}
+          className="rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          {removing ? 'Removing…' : 'Remove'}
+        </button>
       </div>
-    </Link>
+      {error !== null && <p className="px-4 pb-3 text-xs text-red-700">{error}</p>}
+    </div>
   );
-}
-
-function describeMissingDescription(status: SearchResult['asset']['status']): string {
-  if (status === 'failed') return 'Analysis failed — open to retry.';
-  return 'Waiting for AI metadata…';
 }

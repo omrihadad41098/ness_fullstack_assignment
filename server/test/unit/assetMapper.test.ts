@@ -10,7 +10,8 @@ describe('toAssetDto', () => {
       kind: 'image',
       sizeBytes: 2048,
       status: 'ready',
-      description: 'A black cat',
+      title: 'Black cat',
+      description: 'A black cat sitting on a windowsill.',
       tags: ['cat', 'black'],
       keywords: ['animal'],
       extractedText: null,
@@ -26,14 +27,30 @@ describe('toAssetDto', () => {
       sizeBytes: 2048,
       status: 'ready',
       error: null,
-      description: 'A black cat',
+      title: 'Black cat',
+      description: 'A black cat sitting on a windowsill.',
       tags: ['cat', 'black'],
-      keywords: ['animal'],
       extractedText: null,
       contentUrl: `/api/assets/${record._id.toString()}/content`,
       createdAt: '2026-01-02T03:04:05.000Z',
       updatedAt: '2026-01-02T03:04:06.000Z',
     });
+  });
+
+  it('keeps extracted text only for text files, never for images', () => {
+    const image = assetRecord({
+      kind: 'image',
+      mimeType: 'image/png',
+      extractedText: 'OCR leftover',
+    });
+    const text = assetRecord({
+      kind: 'text',
+      mimeType: 'text/plain',
+      extractedText: 'hello',
+    });
+
+    expect(toAssetDto(image).extractedText).toBeNull();
+    expect(toAssetDto(text).extractedText).toBe('hello');
   });
 
   it('never leaks storage or AI provenance fields', () => {

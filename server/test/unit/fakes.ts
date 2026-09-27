@@ -15,6 +15,7 @@ export function assetRecord(overrides: Partial<AssetRecord> = {}): AssetRecord {
     fileId: new Types.ObjectId(),
     status: 'pending',
     error: null,
+    title: null,
     description: null,
     tags: [],
     keywords: [],
@@ -84,7 +85,7 @@ export function createFakeRepository(initial: AssetRecord[] = []): FakeRepositor
     },
 
     // Deliberately naive: the real ranking is MongoDB's job and is covered by the filter-builder
-    // tests and Postman. This only needs to let the service layer be tested.
+    // tests. This only needs to let the service layer be tested.
     search({ q, page, limit, kind }) {
       takeFailure();
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -110,6 +111,15 @@ export function createFakeRepository(initial: AssetRecord[] = []): FakeRepositor
       const index = records.findIndex((r) => r._id.equals(id));
       if (index === -1) return Promise.resolve(null);
       return Promise.resolve(records.splice(index, 1)[0] ?? null);
+    },
+
+    deleteByFileIds(fileIds) {
+      takeFailure();
+      const doomed = new Set(fileIds.map((id) => id.toString()));
+      for (let i = records.length - 1; i >= 0; i--) {
+        if (doomed.has(records[i]?.fileId.toString() ?? '')) records.splice(i, 1);
+      }
+      return Promise.resolve();
     },
 
     claimForProcessing(id) {

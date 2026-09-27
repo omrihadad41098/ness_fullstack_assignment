@@ -53,11 +53,14 @@ export function createFakeAiProvider(): AiProvider {
 
     analyzeImage(input: ImageInput): Promise<AssetMetadata> {
       const words = wordsFrom(input.fileName);
-      const tags = unique([...words, 'image', extensionWord(input.mimeType)]);
+      const title = sentenceCase(words.join(' '));
       return Promise.resolve(
         parseMetadata({
-          description: `Image file "${input.fileName}" (${input.mimeType}, ${input.data.length} bytes). Offline provider: no visual analysis performed.`,
-          tags,
+          title,
+          // Descriptions are indexed, so they say something about the file rather than about the
+          // provider that produced them. Which provider ran is recorded on the asset itself.
+          description: title,
+          tags: unique([...words, 'image', extensionWord(input.mimeType)]),
           keywords: unique(['image', 'picture', 'photo', ...categoriesFor(words.join(' '))]),
           extractedText: null,
         }),
@@ -69,7 +72,8 @@ export function createFakeAiProvider(): AiProvider {
       const contentWords = frequentWords(input.text, 10);
       return Promise.resolve(
         parseMetadata({
-          description: `Text file "${input.fileName}" containing ${input.text.length} characters. Offline provider: terms derived from the filename and most frequent words.`,
+          title: sentenceCase(nameWords.join(' ')),
+          description: openingOf(input.text),
           tags: unique([...nameWords, ...contentWords]),
           keywords: unique([
             'text',
@@ -110,6 +114,17 @@ function categoriesFor(haystack: string): string[] {
   return CATEGORY_HINTS.filter((hint) => hint.match.test(haystack)).flatMap(
     (hint) => hint.keywords,
   );
+}
+
+function sentenceCase(words: string): string {
+  if (words === '') return 'Untitled';
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The opening of a text file is the closest an offline provider can get to a real summary. */
+function openingOf(text: string): string {
+  const opening = text.trim().replace(/\s+/g, ' ').slice(0, 200);
+  return opening === '' ? '' : opening;
 }
 
 function extensionWord(mimeType: string): string {

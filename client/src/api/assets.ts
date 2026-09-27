@@ -50,10 +50,6 @@ export function uploadAssets(files: File[], signal?: AbortSignal): Promise<Uploa
   });
 }
 
-export function reprocessAsset(id: string): Promise<Asset> {
-  return apiFetch<Asset>(`/api/assets/${id}/reprocess`, { method: 'POST' });
-}
-
 export function deleteAsset(id: string): Promise<void> {
   return apiFetch<void>(`/api/assets/${id}`, { method: 'DELETE' });
 }

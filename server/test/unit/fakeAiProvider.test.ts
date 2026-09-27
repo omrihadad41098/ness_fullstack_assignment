@@ -22,6 +22,7 @@ describe('fakeAiProvider', () => {
       fileName: 'portrait-black-hair.png',
     });
 
+    expect(metadata.title).toBe('Portrait black hair');
     expect(metadata.tags).toContain('black');
     expect(metadata.tags).toContain('hair');
     expect(metadata.tags).toContain('image');

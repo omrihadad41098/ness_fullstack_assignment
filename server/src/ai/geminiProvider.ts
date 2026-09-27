@@ -14,12 +14,13 @@ const ATTEMPTS = 3;
 const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
+    title: { type: 'string', description: '2-5 words naming the subject, like a photo caption.' },
     description: { type: 'string', description: '1-3 sentences describing the file.' },
     tags: { type: 'array', items: { type: 'string' } },
     keywords: { type: 'array', items: { type: 'string' } },
     extractedText: { type: 'string', description: 'Text visible in the file, or an empty string.' },
   },
-  required: ['description', 'tags', 'keywords'],
+  required: ['title', 'description', 'tags', 'keywords'],
 };
 
 type InputPart =
@@ -102,34 +103,28 @@ async function callGemini(apiKey: string, model: string, input: InputPart[]): Pr
   return text;
 }
 
+type Json = Record<string, unknown>;
+
+function isObject(value: unknown): value is Json {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
- * Pulls the model's text out of the response without assuming one exact envelope — SDKs expose it as
- * `output_text`, and the REST payload nests it under `interaction`.
+ * The Interactions REST response is `{ steps: [...] }`: `thought` steps carry the model's reasoning
+ * (an opaque signature, no text) and `model_output` steps carry `content: [{ type: 'text', text }]`.
+ * Only model output is the answer — thoughts must never reach `parseMetadata`.
  */
 export function extractOutputText(payload: unknown): string | null {
-  if (typeof payload !== 'object' || payload === null) return null;
-  const root = payload as Record<string, unknown>;
-  const interaction =
-    typeof root.interaction === 'object' && root.interaction !== null
-      ? (root.interaction as Record<string, unknown>)
-      : root;
+  if (!isObject(payload) || !Array.isArray(payload.steps)) return null;
 
-  const direct = interaction.output_text ?? interaction.outputText;
-  if (typeof direct === 'string' && direct.trim() !== '') return direct;
+  const texts = payload.steps
+    .filter((step): step is Json => isObject(step) && step.type === 'model_output')
+    .flatMap((step): unknown[] => (Array.isArray(step.content) ? step.content : []))
+    .filter((part): part is Json => isObject(part) && part.type === 'text')
+    .map((part) => part.text)
+    .filter((text): text is string => typeof text === 'string' && text.trim() !== '');
 
-  const output = interaction.output ?? interaction.content;
-  if (Array.isArray(output)) {
-    const texts = output
-      .map((item) =>
-        typeof item === 'object' && item !== null
-          ? (item as Record<string, unknown>).text
-          : undefined,
-      )
-      .filter((value): value is string => typeof value === 'string');
-    if (texts.length > 0) return texts.join('\n');
-  }
-
-  return null;
+  return texts.length > 0 ? texts.join('') : null;
 }
 
 function describe(err: unknown): string {

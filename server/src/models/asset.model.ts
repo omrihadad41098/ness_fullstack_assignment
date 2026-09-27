@@ -1,4 +1,5 @@
 import { Schema, model, type Types } from 'mongoose';
+import { MAX_FILE_NAME_LENGTH } from '../validation/fileType.js';
 import type { AssetKind, AssetStatus } from '../types/api.js';
 
 /** Shape returned by `.lean()` reads — the only asset type the layers above see. */
@@ -11,6 +12,7 @@ export type AssetRecord = {
   fileId: Types.ObjectId;
   status: AssetStatus;
   error: string | null;
+  title: string | null;
   description: string | null;
   tags: string[];
   keywords: string[];
@@ -24,7 +26,7 @@ export type AssetRecord = {
 
 const assetSchema = new Schema<AssetRecord>(
   {
-    originalName: { type: String, required: true, trim: true, maxlength: 255 },
+    originalName: { type: String, required: true, trim: true, maxlength: MAX_FILE_NAME_LENGTH },
     mimeType: { type: String, required: true },
     kind: { type: String, required: true, enum: ['text', 'image'] },
     sizeBytes: { type: Number, required: true, min: 1 },
@@ -36,6 +38,7 @@ const assetSchema = new Schema<AssetRecord>(
       default: 'pending',
     },
     error: { type: String, default: null },
+    title: { type: String, default: null },
     description: { type: String, default: null },
     tags: { type: [String], default: [] },
     keywords: { type: [String], default: [] },
@@ -49,6 +52,8 @@ const assetSchema = new Schema<AssetRecord>(
 
 // MongoDB allows one text index per collection, so search fields share this one.
 // Weights decide ranking: AI tags beat keywords beat prose, raw extracted text ranks last.
+// `title` is deliberately absent: its words already appear in the tags and description, so adding
+// it would buy nothing and force every existing deployment to rebuild the index.
 assetSchema.index(
   {
     tags: 'text',

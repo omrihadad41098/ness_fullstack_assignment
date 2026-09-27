@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGeminiProvider, extractOutputText } from '../../src/ai/geminiProvider.js';
 
 const validBody = JSON.stringify({
+  title: 'Printed receipt',
   description: 'A printed receipt.',
   tags: ['receipt'],
   keywords: ['document', 'paper'],
@@ -12,8 +13,20 @@ function jsonResponse(status: number, body: string): Response {
   return new Response(body, { status, headers: { 'content-type': 'application/json' } });
 }
 
+/** Mirrors a real Interactions response: a thought step, then the model output. */
+function interaction(outputText: string): unknown {
+  return {
+    object: 'interaction',
+    status: 'completed',
+    steps: [
+      { type: 'thought', signature: 'opaque-signature' },
+      { type: 'model_output', content: [{ type: 'text', text: outputText }] },
+    ],
+  };
+}
+
 function okResponse(outputText: string): Response {
-  return jsonResponse(200, JSON.stringify({ interaction: { output_text: outputText } }));
+  return jsonResponse(200, JSON.stringify(interaction(outputText)));
 }
 
 afterEach(() => {
@@ -21,21 +34,27 @@ afterEach(() => {
 });
 
 describe('extractOutputText', () => {
-  it('reads the nested REST envelope', () => {
-    expect(extractOutputText({ interaction: { output_text: 'hi' } })).toBe('hi');
+  it('reads the text of the model_output step', () => {
+    expect(extractOutputText(interaction('{"title":"x"}'))).toBe('{"title":"x"}');
   });
 
-  it('reads a flat envelope', () => {
-    expect(extractOutputText({ output_text: 'hi' })).toBe('hi');
+  it('ignores thought steps and non-text parts', () => {
+    const payload = {
+      steps: [
+        { type: 'thought', signature: 'abc', text: 'reasoning' },
+        {
+          type: 'model_output',
+          content: [{ type: 'image', data: 'x' }, { type: 'text', text: '{"a":' }],
+        },
+        { type: 'model_output', content: [{ type: 'text', text: '1}' }] },
+      ],
+    };
+    expect(extractOutputText(payload)).toBe('{"a":1}');
   });
 
-  it('joins text parts when the output is a content array', () => {
-    expect(extractOutputText({ output: [{ text: 'a' }, { text: 'b' }, { image: {} }] })).toBe(
-      'a\nb',
-    );
-  });
-
-  it('returns null for a shape it cannot read', () => {
+  it('returns null when there is no model output text', () => {
+    expect(extractOutputText({ steps: [{ type: 'thought', signature: 'abc' }] })).toBeNull();
+    expect(extractOutputText({ steps: [{ type: 'model_output', content: [] }] })).toBeNull();
     expect(extractOutputText({ candidates: [] })).toBeNull();
     expect(extractOutputText(null)).toBeNull();
     expect(extractOutputText('text')).toBeNull();

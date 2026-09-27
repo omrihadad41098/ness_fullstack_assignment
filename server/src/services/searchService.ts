@@ -18,7 +18,6 @@ export function createSearchService(repository: AssetRepository): SearchService 
         results: results.map(({ asset, score }) => ({
           asset: toAssetDto(asset),
           score,
-          matchedTags: matchedTags(query.q, [...asset.tags, ...asset.keywords]),
         })),
         total,
       };

@@ -54,6 +54,22 @@ describe('createFromUploads', () => {
     // Otherwise the bytes would sit in GridFS with no document ever pointing at them.
     expect(storage.stored.size).toBe(0);
   });
+
+  it('removes documents a partial insert already wrote, so none point at deleted bytes', async () => {
+    const files = [uploadedFile(), uploadedFile({ originalName: 'second.txt' })];
+    const alreadyWritten = assetRecord({ fileId: files[0]!.fileId });
+    const unrelated = assetRecord();
+    const repository = createFakeRepository([alreadyWritten, unrelated]);
+    const storage = createFakeStorage();
+    for (const file of files) storage.stored.add(file.fileId.toString());
+    repository.failNextWith(new Error('connection reset mid-insert'));
+    const service = createAssetService({ repository, storage });
+
+    await expect(service.createFromUploads(files)).rejects.toThrow('connection reset');
+
+    expect(repository.records.map((r) => r._id.toString())).toEqual([unrelated._id.toString()]);
+    expect(storage.stored.size).toBe(0);
+  });
 });
 
 describe('list', () => {

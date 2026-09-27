@@ -1,17 +1,15 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import LibraryPage from './pages/LibraryPage';
 import AssetPage from './pages/AssetPage';
-import HealthIndicator from './components/HealthIndicator';
 
 export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
+        <div className="mx-auto max-w-5xl px-4 py-4">
           <Link to="/" className="text-lg font-semibold tracking-tight">
             Knowledge Management System
           </Link>
-          <HealthIndicator />
         </div>
       </header>
 

@@ -13,22 +13,22 @@
 
 - Restate the goal in one sentence; map it to requirement IDs (R1–R4 in `PROJECT.md`).
 - Read the code you'll touch and the relevant `PROJECT.md` section **before** editing.
-- Check the **global constraints** in `PROJECT.md` §1 (MongoDB only, no caching, no multer/zod/pino/TanStack/Fly.io, Tailwind, Vitest unit only, Postman).
+- Check the **global constraints** in `PROJECT.md` §1 (MongoDB only, no caching, no multer/zod/pino/TanStack/Fly.io, Tailwind, Vitest unit only).
 - Ambiguous *and* expensive to reverse (data model, API shape, vendor, host)? Ask one focused question. Otherwise choose a sensible default, state it, proceed.
 
 
 
 ### Step 2 — Plan
 
-- Non-trivial task → short todo list: files to change, unit tests to add, Postman requests to add/update, how to verify.
-- Prefer vertical slices (route + service + repository + test + Postman request) over half-built layers.
+- Non-trivial task → short todo list: files to change, unit tests to add, UI flows to click through, how to verify.
+- Prefer vertical slices (route + service + repository + test + UI) over half-built layers.
 
 
 
 ### Step 3 — Code
 
 - Follow §2 standards. Respect layering and the API contract.
-- Contract change → update `PROJECT.md` §6, `server/src/types/api.ts`, `client/src/api/types.ts`, and the Postman collection together.
+- Contract change → update `PROJECT.md` §6, `server/src/types/api.ts`, and `client/src/api/types.ts` together.
 - New env var → `config.ts` + `.env.example` + `PROJECT.md` §7.
 
 
@@ -36,13 +36,11 @@
 ### Step 4 — Test (never skip)
 
 - Add/update Vitest unit tests (§3) for the logic you changed.
-- Add/update the Postman request + test script for any endpoint you added/changed (§4).
 - Run for each touched package:
   ```powershell
   npm run typecheck; npm run lint; npm test
   ```
-- Endpoint work: run the server against local Mongo and run the Postman collection (Postman app or `npx newman run postman/kms.postman_collection.json -e postman/local.postman_environment.json`).
-- UI work: run both dev servers and click through: upload → status turns `ready` → search finds it → detail renders.
+- Endpoint or UI work: run both dev servers and click through the library: upload → status turns `ready` → search finds it → detail renders.
 - Not done while anything is red. Pre-existing unrelated failure → say so and add it to `STATUS.md` known issues.
 
 
@@ -80,7 +78,7 @@ alternative), update known issues, append a one-line session note.
 | "X is broken / error …" | 1 → 5 → 4 → 6 → 7                                                    |
 | "Write tests for X"     | 1 → 4 (→ 5 if bugs found) → 6                                        |
 | "Explain X / why …"     | Read code + `STATUS.md` decisions → answer with trade-offs; no edits |
-| "Deploy"                | `PROJECT.md` §8 checklist → Postman against deployed env → 6 → 7     |
+| "Deploy"                | `PROJECT.md` §8 checklist → click through the deployed UI → 6 → 7    |
 | "Finish / README"       | Tick every R1–R4 box, then README checklist in `PROJECT.md` §8       |
 
 
@@ -197,17 +195,13 @@ npm run test:coverage
 
 
 
-## 4. API testing (Postman)
+## 4. UI verification
 
-- Collection: `postman/kms.postman_collection.json`; environments: `postman/local.postman_environment.json` (`baseUrl=http://localhost:3000`) and `postman/deployed.postman_environment.json`.
-- One request per endpoint + negative cases, organized in folders: `Health`, `Assets`, `Search`, `Errors`.
-- Every request has `pm.test` scripts asserting status code, error shape (`error.code`, `error.requestId`), key fields, and `Cache-Control: no-store`.
-- Chaining: the upload request stores `assetId` in a collection variable; later requests use `{{assetId}}`.
-A "wait until ready" request polls `GET /api/assets/{{assetId}}` using `pm.execution.setNextRequest` until `status` is `ready`/`failed` (max N tries).
-- Upload requests use form-data key `files` pointing at files in `samples/` (commit small sample files).
-- Brief scenarios: after uploading `samples/black-hair.jpg` + `samples/black-hair.txt` and `samples/receipt.jpg` + `samples/documents.md`, `GET /api/search?q=black hair` and `?q=document` must include both expected assets.
-- Negative cases: unsupported type → 415, oversized → 413, bad ObjectId → 400, unknown id → 404, empty `q` → 400.
-- Keep the collection updated in the same change as the endpoint. CLI run (optional): `npx newman run postman/kms.postman_collection.json -e postman/local.postman_environment.json`.
+The frontend is how the API is exercised end-to-end. After any route, service, or UI change:
+
+- Run the server against local Mongo and the Vite client (`API_PROXY_TARGET` if the server is not on 3000).
+- Click through the path a user would take: upload → card appears → status becomes `ready` → search finds it → detail page renders the title and preview.
+- Cover the error states the change can hit (unsupported type, empty search, missing asset) from the UI, not from a separate API collection.
 
 ---
 
@@ -219,11 +213,11 @@ A "wait until ready" request polls `GET /api/assets/{{assetId}}` using `pm.execu
 
 ### Method
 
-1. **Reproduce** exactly (command, Postman request, input file). Tests: run the single test.
+1. **Reproduce** exactly (command, UI click, input file). Tests: run the single test.
 2. **Read the full error**; find the first stack frame in our code. For HTTP errors take `requestId` from the response and grep the server logs.
 3. **Inspect state:** the asset document (`status`, `error`, tags), the GridFS file, the loaded config (logged at startup without secrets), indexes (`db.assets.getIndexes()`).
 4. **One hypothesis at a time**, verified by a targeted check (log line, unit test, mongosh query). Disproved → next hypothesis; don't stack fixes.
-5. **Fix the root cause** minimally; add a regression unit test; remove temporary logs; rerun typecheck/lint/tests (+ Postman if an endpoint was involved).
+5. **Fix the root cause** minimally; add a regression unit test; remove temporary logs; rerun typecheck/lint/tests (and the UI path if an endpoint was involved).
 6. **Explain** in Insight: symptom → root cause → fix → prevention.
 
 Two failed attempts on the same idea → stop, summarize evidence, rethink or ask the user.

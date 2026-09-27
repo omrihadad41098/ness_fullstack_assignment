@@ -124,6 +124,16 @@ describe('parseUpload', () => {
     expect(storage.stored.size).toBe(0);
   });
 
+  it('rejects a file name longer than the model allows with 400, not a database 500', async () => {
+    const error = await upload([
+      { filename: `${'a'.repeat(300)}.txt`, contentType: 'text/plain', body: 'hi' },
+    ]).catch((e: unknown) => e);
+
+    expect((error as AppError).code).toBe('VALIDATION_ERROR');
+    expect((error as AppError).status).toBe(400);
+    expect(storage.stored.size).toBe(0);
+  });
+
   it('rejects more files than the limit allows', async () => {
     const parts = Array.from({ length: 3 }, (_, i) => ({
       filename: `f${i}.txt`,

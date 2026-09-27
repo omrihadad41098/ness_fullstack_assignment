@@ -44,8 +44,11 @@ export function createAssetService({ repository, storage }: AssetServiceDeps): A
         );
         return records.map(toAssetDto);
       } catch (err) {
-        // The bytes are already in GridFS; without documents pointing at them they are orphans.
-        await Promise.all(files.map((file) => storage.delete(file.fileId).catch(() => undefined)));
+        // insertMany is not atomic: a failure mid-batch can leave some documents written. Remove
+        // those before the bytes, or the library would list assets whose content is gone.
+        const fileIds = files.map((file) => file.fileId);
+        await repository.deleteByFileIds(fileIds).catch(() => undefined);
+        await Promise.all(fileIds.map((fileId) => storage.delete(fileId).catch(() => undefined)));
         throw err;
       }
     },

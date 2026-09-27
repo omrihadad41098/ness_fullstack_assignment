@@ -1,6 +1,6 @@
 /**
  * HTTP DTOs. Mirrored in `client/src/api/types.ts` — change both together
- * (and `agent_mds/PROJECT.md` §6 + the Postman collection).
+ * (and `agent_mds/PROJECT.md` §6).
  */
 
 export type AssetKind = 'text' | 'image';
@@ -14,9 +14,13 @@ export type Asset = {
   sizeBytes: number;
   status: AssetStatus;
   error: string | null;
+  /** Short human-readable caption ("Black cat"), shown as the name on the detail page. */
+  title: string | null;
+  /** 1–3 sentence AI description, shown on the detail page. */
   description: string | null;
+  /** Concrete AI terms ("black hair"), shown as chips. Keywords stay server-side for search. */
   tags: string[];
-  keywords: string[];
+  /** File body for text assets, so the detail page can preview it. Images stay null. */
   extractedText: string | null;
   /** Relative URL: /api/assets/:id/content */
   contentUrl: string;
@@ -27,7 +31,6 @@ export type Asset = {
 export type SearchResult = {
   asset: Asset;
   score: number;
-  matchedTags: string[];
 };
 
 export type HealthResponse = {

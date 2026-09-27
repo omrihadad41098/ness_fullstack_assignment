@@ -22,6 +22,9 @@ const IMAGE_TYPES: Record<string, string[]> = {
   gif: ['image/gif'],
 };
 
+/** Mirrors the `maxlength` on `Asset.originalName`, so a long name is a 400 rather than a 500. */
+export const MAX_FILE_NAME_LENGTH = 255;
+
 export type DeclaredFileType = {
   kind: AssetKind;
   /** Normalised extension without the dot; `jpg` and `jpeg` stay distinct but share a signature. */
@@ -40,6 +43,13 @@ export function supportedExtensions(): string[] {
 
 /** Throws `UNSUPPORTED_FILE_TYPE` (415) unless both extension and declared MIME are allowed. */
 export function validateDeclaredFileType(fileName: string, mimeType: string): DeclaredFileType {
+  if (fileName.trim().length > MAX_FILE_NAME_LENGTH) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      `File name is longer than ${MAX_FILE_NAME_LENGTH} characters`,
+      { length: fileName.length },
+    );
+  }
   const extension = extensionOf(fileName);
   const declared = mimeType.split(';')[0]?.trim().toLowerCase() ?? '';
 

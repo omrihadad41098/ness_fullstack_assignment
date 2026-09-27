@@ -46,6 +46,7 @@ export function createProcessingService({
     try {
       const metadata = await analyse(record, { storage, provider });
       await repository.markReady(id, {
+        title: metadata.title === '' ? null : metadata.title,
         description: metadata.description === '' ? null : metadata.description,
         tags: metadata.tags,
         keywords: metadata.keywords,
