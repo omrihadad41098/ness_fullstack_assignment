@@ -1,0 +1,4 @@
+This file is plain text but carries a .png extension on purpose.
+
+The server must reject it with 415 UNSUPPORTED_FILE_TYPE because its magic bytes are not
+a PNG signature, even though the declared content type looks fine.

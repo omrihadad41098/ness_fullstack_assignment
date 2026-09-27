@@ -1,0 +1,7 @@
+Interview prep notes.
+
+The woman in the reference photo has long black hair and is holding a paper document,
+which is exactly the kind of overlap the search feature has to handle: a text file that
+mentions black hair should surface next to an image that actually contains black hair.
+
+Remember to explain why the ranking runs inside MongoDB rather than in Node.
