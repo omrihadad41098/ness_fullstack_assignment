@@ -30,7 +30,7 @@ Deploy: one Docker image + MongoDB Atlas on a container host (not Fly.io).
 - **Banned:** multer, zod, pino, TanStack Query, Fly.io.
 - **Tests:** Vitest only, unit tests only, never touch real Mongo / network / AI. End-to-end API behaviour is checked by using the UI.
 - **Contract changes** update together: `PROJECT.md` §6, server + client `types/api.ts`.
-- **Secrets** only in `.env` (gitignored); keep `.env.example` current.
+- **Secrets** only in `.env` (gitignored). There is no `.env.example`; the README config table and `PROJECT.md` §7 document every variable.
 - **Don't commit or push unless asked.**
 - **Windows + PowerShell:** chain with `;`, env vars via `$env:X="y"`, quote paths (repo is under OneDrive).
 

@@ -32,7 +32,9 @@ Requires Node 22.12+ and Docker.
 docker run -d --name kms-mongo -p 27017:27017 mongo:7
 
 cd server
-Copy-Item .env.example .env   # set GEMINI_API_KEY, or AI_PROVIDER=fake to run offline
+# Create server/.env with the variables from "Configuration" below, at minimum:
+#   MONGODB_URI=mongodb://localhost:27017/kms
+#   GEMINI_API_KEY=...        (or AI_PROVIDER=fake to run offline)
 npm install; npm run dev      # http://localhost:3000
 
 cd ../client
@@ -60,8 +62,8 @@ cd ../client; npm run typecheck; npm run lint; npm test
 
 ## Configuration
 
-Set in `server/.env` (see `server/.env.example`). Invalid config stops the server at startup with a list
-of every problem.
+Set in `server/.env` locally (gitignored) or in the host's environment settings in production. Invalid
+config stops the server at startup with a list of every problem.
 
 | Variable         | Default            | Notes                              |
 | ---------------- | ------------------ | ---------------------------------- |

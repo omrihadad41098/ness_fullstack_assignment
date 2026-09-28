@@ -345,7 +345,7 @@ Uploads are all-or-nothing: one bad file fails the batch and removes the rest.
 | `CLIENT_DIST_DIR`                   | `../client/dist`                | served in production; SPA fallback excludes `/api` |
 
 
-Every new env var → `config.ts` + `server/.env.example` + this table.
+Every new env var → `config.ts` + this table + the README config table.
 `loadConfig` collects **all** problems and throws one error listing them; `describeConfig` is the only
 thing logged at startup (API key dropped, Mongo credentials redacted).
 

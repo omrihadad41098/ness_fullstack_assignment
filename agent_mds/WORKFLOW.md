@@ -29,7 +29,7 @@
 
 - Follow §2 standards. Respect layering and the API contract.
 - Contract change → update `PROJECT.md` §6, `server/src/types/api.ts`, and `client/src/api/types.ts` together.
-- New env var → `config.ts` + `.env.example` + `PROJECT.md` §7.
+- New env var → `config.ts` + `PROJECT.md` §7 + README config table.
 
 
 
