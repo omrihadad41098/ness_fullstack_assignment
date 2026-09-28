@@ -1,0 +1,23 @@
+# Render Blueprint: builds the existing Dockerfile from this repo.
+# Secrets use `sync: false`, so Render asks for them in its dashboard and they never live in git.
+services:
+  - type: web
+    name: kms
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_CONCURRENCY
+        value: "2"
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      - key: LOG_LEVEL
+        value: info

@@ -16,8 +16,13 @@ export type Asset = {
   error: string | null;
   /** Short human-readable caption ("Black cat"), shown as the name on the detail page. */
   title: string | null;
+  /** 1–3 sentence AI description, shown on the detail page. */
+  description: string | null;
+  /** Concrete AI terms ("black hair"), shown as chips. Keywords stay server-side for search. */
+  tags: string[];
   /** File body for text assets, so the detail page can preview it. Images stay null. */
   extractedText: string | null;
+  /** Relative URL: /api/assets/:id/content */
   contentUrl: string;
   createdAt: string;
   updatedAt: string;
